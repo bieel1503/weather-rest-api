@@ -36,6 +36,7 @@ public class WeatherLocation {
         this.currentWeather = builder.getCurrentWeather();
         this.dailyWeather = builder.getDailyWeather();
         this.lastUpdated = builder.getLastUpdated();
+        this.lastAccessed = System.currentTimeMillis();
 
         this.timezone.ifPresent(t -> {
             var tz = TimeZone.getTimeZone(t);
@@ -145,12 +146,8 @@ public class WeatherLocation {
     }
 
     public void updateData() {
-        if (!this.dailyWeather.isPresent()) {
-        }
         if (!this.canUpdateDaily() && !this.canUpdateCurrent())
             return;
-
-
 
         var data = MeteoAPI.requestLocationData(this);
 
@@ -158,6 +155,15 @@ public class WeatherLocation {
             if (object.isJsonNull() || object.size() == 0) {
                 System.out.println("ué: " + this.getName());
                 return;
+            }
+
+            if (this.timezone.isEmpty() && object.has("timezone")) {
+                this.timezone = Optional.of(object.get("timezone").getAsString());
+
+                var tz = TimeZone.getTimeZone(this.timezone.get());
+                this.daylight = tz.inDaylightTime(new Date());
+                this.longTZ = Optional.of(tz.getDisplayName(this.daylight, TimeZone.LONG));
+                this.shortTZ = Optional.of(tz.getDisplayName(this.daylight, TimeZone.SHORT));
             }
 
             if (object.has("current_weather")) {
@@ -178,11 +184,8 @@ public class WeatherLocation {
         obj.addProperty("name", this.name);
         obj.addProperty("latitude", this.latitude);
         obj.addProperty("longitude", this.longitude);
-
-        if (!this.country.equalsIgnoreCase("none")) {
-            obj.addProperty("country", this.country);
-            obj.addProperty("country_code", this.countryCode);
-        }
+        obj.addProperty("country", this.country);
+        obj.addProperty("country_code", this.countryCode);
 
         this.timezone.ifPresent(t -> {
             obj.addProperty("timezone", t);

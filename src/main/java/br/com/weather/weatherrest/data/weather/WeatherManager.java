@@ -33,6 +33,7 @@ public final class WeatherManager {
                 });
             });
 
+            location.setLastAccessed(System.currentTimeMillis());
             return Optional.of(location);
         }
 

@@ -95,7 +95,9 @@ public final class WeatherLocationBuilder {
     }
 
     public WeatherLocationBuilder timezone(String timezone) {
-        this.timezone = Optional.of(timezone);
+        if (timezone != null && timezone != "none") {
+            this.timezone = Optional.of(timezone);
+        }
         return this;
     }
 
@@ -118,9 +120,9 @@ public final class WeatherLocationBuilder {
     }
 
     public WeatherLocationBuilder population(int population) {
-        this.population = Optional.of(population)
-                .filter((p) -> p > 0);
-
+        if (population > 0) {
+            this.population = Optional.of(population);
+        }
         return this;
     }
 
