@@ -122,12 +122,13 @@ public class WeatherStorage {
                 statement.setString(12, json.has("weather_data") ? json.toString() : "{}");
                 statement.addBatch();
 
-                if (i % 500 == 0 || i == (locArray.size() - 1)) {
+                if (i % 500 == 0) {
                     statement.executeBatch();
                 }
             }
+
+            statement.executeBatch();
             con.commit();
-            statement.clearBatch();
         } catch (Exception e) {
             e.printStackTrace();
         }

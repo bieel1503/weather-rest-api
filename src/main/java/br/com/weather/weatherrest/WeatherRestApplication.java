@@ -44,23 +44,21 @@ public class WeatherRestApplication {
                 return new ResponseEntity<String>(json.toString(), HttpStatus.FOUND);
             }
         } else if (latitude != null && longitude != null) {
-            try {
-                var doubleLat = Double.valueOf(latitude);
-                var doubleLong = Double.valueOf(longitude);
-                var location = WeatherManager.getByCoords(doubleLat, doubleLong);
+            var location = WeatherManager.getByCoords(latitude, longitude);
 
-                if (location.isPresent()) {
-                    return new ResponseEntity<String>(location.get().toJsonObject(false).toString(), HttpStatus.FOUND);
-                }
-            } catch (Exception e) {
+            if (location.isPresent()) {
+                return new ResponseEntity<String>(location.get().toJsonObject(false).toString(), HttpStatus.FOUND);
             }
         }
 
-        return new ResponseEntity<String>("{}", HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<String>("{}", HttpStatus.NOT_FOUND);
     }
 
     @GetMapping(path = "/location", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> get(@RequestParam(name = "id") String id) {
+        if (id == null)
+            return new ResponseEntity<String>("{}", HttpStatus.BAD_REQUEST);
+
         try {
             var pId = Integer.valueOf(id);
             var location = WeatherManager.getById(pId);
@@ -69,7 +67,8 @@ public class WeatherRestApplication {
                 return new ResponseEntity<String>(location.get().toJsonObject(true).toString(), HttpStatus.FOUND);
             }
         } catch (Exception e) {
+            e.printStackTrace();
         }
-        return new ResponseEntity<String>("{}", HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<String>("{}", HttpStatus.NOT_FOUND);
     }
 }

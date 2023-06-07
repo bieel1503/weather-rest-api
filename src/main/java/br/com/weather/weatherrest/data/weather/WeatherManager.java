@@ -1,5 +1,7 @@
 package br.com.weather.weatherrest.data.weather;
 
+import java.math.RoundingMode;
+import java.text.DecimalFormat;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
@@ -19,33 +21,12 @@ public final class WeatherManager {
 
     public static Optional<WeatherLocation> getById(int id) {
         var location = locations.get(id);
-        if (location != null) {
-            location.getDailyWeather().ifPresentOrElse(d -> {
-                System.out.println("update attempt");
-                location.updateData();
-            }, () -> {
-                storage.queryWeatherData(location).ifPresentOrElse(json -> {
-                    System.out.println("data from DB: " + location.getName());
-                    location.setDailyWeather(DailyWeather.fromJSON(json));
-                    location.setCurrentWeather(CurrentWeather.fromJSON(json));
-                }, () -> {
-                    location.updateData();
-                });
-            });
 
+        if (location != null) {
+            location.updateData();
             location.setLastAccessed(System.currentTimeMillis());
             return Optional.of(location);
         }
-
-        /*
-         * var query = storage.queryLocation(id);
-         * if (query.isPresent()) {
-         * location = query.get();
-         * locations.put(location.getId(), location);
-         * location.updateData();
-         * return query;
-         * }
-         */
 
         return Optional.empty();
     }
@@ -57,25 +38,15 @@ public final class WeatherManager {
                 .filter((w) -> Pattern.matches("(?i)^.*" + normalized + ".*$", w.getNormalizedName()))
                 .collect(Collectors.toList());
 
-        /*
-         * storage.queryLocation(normalized).ifPresent((l) -> {
-         * l.forEach((w) -> {
-         * if (!locations.containsKey(w.getId())) {
-         * locations.put(w.getId(), w);
-         * list.add(w);
-         * System.out.println("new object from SQL: " + w.getName());
-         * }
-         * });
-         * });
-         */
-
         if (list.isEmpty() || !patterns.contains(normalized.toLowerCase())) {
             var search = MeteoAPI.requestLocationByName(normalized);
             search.ifPresent((l) -> {
                 l.forEach((w) -> {
-                    System.out.println("new search by name = " + w.getName());
-                    list.add(w);
-                    locations.put(w.getId(), w);
+                    if (!locations.containsKey(w.getId())) {
+                        System.out.println("new search by name = " + w.getName());
+                        list.add(w);
+                        locations.put(w.getId(), w);
+                    }
                 });
             });
 
@@ -85,8 +56,48 @@ public final class WeatherManager {
         return Optional.of(list).filter((l) -> !l.isEmpty());
     }
 
-    public static Optional<WeatherLocation> getByCoords(double latitude, double longitude) {
-        return MeteoAPI.requestLocationByCoods(latitude, longitude);
+    public static Optional<WeatherLocation> getByCoords(String latitude, String longitude) {
+        List<WeatherLocation> found;
+        String fLat, fLong;
+        try {
+            var dFormat = new DecimalFormat("#.##");
+            dFormat.setRoundingMode(RoundingMode.DOWN);
+
+            fLat = dFormat.format(dFormat.parse(latitude));
+            fLong = dFormat.format(dFormat.parse(longitude));
+
+            found = locations.values().stream().filter(l -> {
+                var wL = dFormat.format(l.getLatitude());
+                var wLn = dFormat.format(l.getLongitude());
+
+                return (wL.equals(fLat) && wLn.equals(fLong));
+            }).toList();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Optional.empty();
+        }
+
+        if (!found.isEmpty()) {
+            return Optional.of(found.get(0));
+        }
+
+        var loc = MeteoAPI.requestLocationByCoods(fLat, fLong);
+
+        if (loc.isPresent()) {
+            var cachedLoc = WeatherManager.getById(loc.get().getId());
+            if (cachedLoc.isPresent()) {
+                return cachedLoc;
+            }
+
+            locations.put(loc.get().getId(), loc.get());
+            return loc;
+        }
+
+        return Optional.empty();
+    }
+
+    public static WeatherStorage getWeatherStorage() {
+        return storage;
     }
 
     public static void initialize() {

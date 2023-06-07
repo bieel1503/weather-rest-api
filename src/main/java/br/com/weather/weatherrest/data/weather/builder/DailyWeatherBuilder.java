@@ -1,5 +1,8 @@
 package br.com.weather.weatherrest.data.weather.builder;
 
+import java.util.List;
+import java.util.Optional;
+
 import br.com.weather.weatherrest.data.weather.DailyWeather;
 import br.com.weather.weatherrest.data.weather.HourlyWeather;
 import br.com.weather.weatherrest.data.weather.WeatherCode;
@@ -11,10 +14,11 @@ public final class DailyWeatherBuilder {
     private WeatherCode weatherCode;
     private long sunrise, sunset;
     private double windSpeed, windGust, windDirection;
-    private HourlyWeather[] hourlyWeather;
+    private Optional<List<HourlyWeather>> hourlyWeather;
     private long timestamp;
 
     public DailyWeatherBuilder() {
+        this.hourlyWeather = Optional.empty();
     }
 
     public DailyWeatherBuilder maxTemperature(double maxTemp) {
@@ -92,12 +96,15 @@ public final class DailyWeatherBuilder {
         return this;
     }
 
-    public DailyWeatherBuilder hourlyWeather(HourlyWeather[] hourlyWeather) {
-        this.hourlyWeather = hourlyWeather;
+    public DailyWeatherBuilder hourlyWeather(List<HourlyWeather> hourlyWeather) {
+        if (hourlyWeather != null) {
+            this.hourlyWeather = Optional.of(hourlyWeather);
+        }
+
         return this;
     }
 
-    public DailyWeatherBuilder timeStamp(long timestamp) {
+    public DailyWeatherBuilder timestamp(long timestamp) {
         this.timestamp = timestamp;
         return this;
     }
@@ -162,7 +169,7 @@ public final class DailyWeatherBuilder {
         return windDirection;
     }
 
-    public HourlyWeather[] getHourlyWeather() {
+    public Optional<List<HourlyWeather>> getHourlyWeather() {
         return hourlyWeather;
     }
 

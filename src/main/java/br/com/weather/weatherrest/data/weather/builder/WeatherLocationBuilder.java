@@ -1,5 +1,6 @@
 package br.com.weather.weatherrest.data.weather.builder;
 
+import java.util.List;
 import java.util.Optional;
 
 import br.com.weather.weatherrest.data.weather.CurrentWeather;
@@ -14,7 +15,7 @@ public final class WeatherLocationBuilder {
     private Optional<String> admin1;
     private Optional<Integer> population;
     private Optional<CurrentWeather> currentWeather;
-    private Optional<DailyWeather[]> dailyWeather;
+    private Optional<List<DailyWeather>> dailyWeather;
     private long lastUpdated;
 
     public WeatherLocationBuilder() {
@@ -66,7 +67,7 @@ public final class WeatherLocationBuilder {
         return currentWeather;
     }
 
-    public Optional<DailyWeather[]> getDailyWeather() {
+    public Optional<List<DailyWeather>> getDailyWeather() {
         return dailyWeather;
     }
 
@@ -134,7 +135,7 @@ public final class WeatherLocationBuilder {
         return this;
     }
 
-    public WeatherLocationBuilder dailyWeather(DailyWeather[] dailyWeather) {
+    public WeatherLocationBuilder dailyWeather(List<DailyWeather> dailyWeather) {
         if (dailyWeather != null) {
             this.dailyWeather = Optional.of(dailyWeather);
         }

@@ -5,7 +5,6 @@ import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse.BodyHandlers;
-import java.text.DecimalFormat;
 import java.text.Normalizer;
 import java.text.Normalizer.Form;
 import java.time.Duration;
@@ -23,7 +22,8 @@ public final class MeteoAPI {
     public static Optional<List<WeatherLocation>> requestLocationByName(String name) {
         try {
             var encodedName = URLEncoder.encode(name, "UTF-8");
-            var apiUrl = URI.create("https://geocoding-api.open-meteo.com/v1/search?name=" + encodedName + "&count=1");
+            var apiUrl = URI
+                    .create("https://geocoding-api.open-meteo.com/v1/search?name=" + encodedName + "&count=100");
             var client = HttpClient.newHttpClient();
             var request = HttpRequest.newBuilder(apiUrl).GET().build();
             var response = client.send(request, BodyHandlers.ofString());
@@ -55,7 +55,8 @@ public final class MeteoAPI {
                 .append("&timezone=auto")
                 .append("&latitude=" + location.getLatitude())
                 .append("&longitude=" + location.getLongitude())
-                .append("&windspeed_unit=ms");
+                .append("&windspeed_unit=ms")
+                .append("&forecast_days=7");
 
         if (location.canUpdateCurrent()) {
             link.append("&current_weather=true");
@@ -64,10 +65,10 @@ public final class MeteoAPI {
         if (location.canUpdateDaily()) {
             link.append(
                     "&daily=temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,precipitation_sum,")
-                    .append("rain_sum,showers_sum,snowfall_sum,precipitation_hours,weathercode,sunrise,sunset,windspeed_10m_max,windgusts_10m_max,winddirection_10m_dominant")
-                    .append("&hourly=temperature_2m,relativehumidity_2m,apparent_temperature,pressure_msl,surface_pressure,cloudcover,")
-                    .append("windspeed_10m,winddirection_10m,windgusts_10m,precipitation,snowfall,rain,showers,weathercode,")
-                    .append("snow_depth,freezinglevel_height,visibility");
+                    .append("rain_sum,showers_sum,snowfall_sum,precipitation_hours,weathercode,sunrise,sunset,windspeed_10m_max,windgusts_10m_max,")
+                    .append("winddirection_10m_dominant&hourly=temperature_2m,relativehumidity_2m,apparent_temperature,pressure_msl,surface_pressure,cloudcover,")
+                    .append("windspeed_10m,winddirection_10m,windgusts_10m,precipitation,precipitation_probability,snowfall,rain,showers,weathercode,")
+                    .append("snow_depth,freezinglevel_height,visibility,is_day");
         }
 
         try {
@@ -92,12 +93,10 @@ public final class MeteoAPI {
         return Optional.empty();
     }
 
-    public static Optional<WeatherLocation> requestLocationByCoods(double latitude, double longitude) {
+    public static Optional<WeatherLocation> requestLocationByCoods(String latitude, String longitude) {
         try {
-            var formattedLat = new DecimalFormat("#.##").format(latitude);
-            var formattedLong = new DecimalFormat("#.##").format(longitude);
-            var apiUrl = URI.create("http://api.geonames.org/findNearbyPlaceNameJSON?lat=" + formattedLat + "&lng="
-                    + formattedLong + "&username=" + geoUsername);
+            var apiUrl = URI.create("http://api.geonames.org/findNearbyPlaceNameJSON?lat=" + latitude + "&lng="
+                    + longitude + "&username=" + geoUsername);
             var client = HttpClient.newHttpClient();
             var request = HttpRequest.newBuilder(apiUrl)
                     .GET()

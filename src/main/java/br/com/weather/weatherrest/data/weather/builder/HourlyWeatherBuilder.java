@@ -8,9 +8,10 @@ public final class HourlyWeatherBuilder {
     private double humidity, visibility;
     private double pressureSeaLevel, surfacePressure;
     private double cloudCover, windSpeed, windGusts, windDirection;
-    private double precipitation, snowfall, rain, showers, snowDepth;
+    private double precipitation,precipitationProbability, snowfall, rain, showers, snowDepth;
     private WeatherCode weatherCode;
     private double freezingLevelHeight;
+    private boolean isDay;
     private long timestamp;
 
     public HourlyWeatherBuilder() {
@@ -64,6 +65,10 @@ public final class HourlyWeatherBuilder {
         return precipitation;
     }
 
+    public double getPrecipitationProbability() {
+        return this.precipitationProbability;
+    }
+
     public double getSnowfall() {
         return snowfall;
     }
@@ -86,6 +91,20 @@ public final class HourlyWeatherBuilder {
 
     public double getFreezingLevelHeight() {
         return freezingLevelHeight;
+    }
+
+    public boolean isDay() {
+        return this.isDay;
+    }
+
+    public HourlyWeatherBuilder precipitationProbability(double precipitationProbability) {
+        this.precipitationProbability = precipitationProbability;
+        return this;
+    }
+
+    public HourlyWeatherBuilder isDay(boolean isDay) {
+        this.isDay = isDay;
+        return this;
     }
 
     public HourlyWeatherBuilder timestamp(long timestamp) {
@@ -143,7 +162,7 @@ public final class HourlyWeatherBuilder {
         return this;
     }
 
-    public HourlyWeatherBuilder precipication(double precipitation) {
+    public HourlyWeatherBuilder precipitation(double precipitation) {
         this.precipitation = precipitation;
         return this;
     }

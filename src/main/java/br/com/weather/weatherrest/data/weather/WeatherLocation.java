@@ -1,6 +1,9 @@
 package br.com.weather.weatherrest.data.weather;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Optional;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
@@ -19,7 +22,7 @@ public class WeatherLocation {
     private Optional<String> admin1;
     private Optional<Integer> population;
     private Optional<CurrentWeather> currentWeather;
-    private Optional<DailyWeather[]> dailyWeather;
+    private Optional<List<DailyWeather>> dailyWeather;
     private long lastUpdated, lastAccessed;
 
     public WeatherLocation(WeatherLocationBuilder builder) {
@@ -110,11 +113,11 @@ public class WeatherLocation {
         return this.currentWeather;
     }
 
-    public Optional<DailyWeather[]> getDailyWeather() {
+    public Optional<List<DailyWeather>> getDailyWeather() {
         return this.dailyWeather;
     }
 
-    public void setDailyWeather(Optional<DailyWeather[]> dailyWeather) {
+    public void setDailyWeather(Optional<List<DailyWeather>> dailyWeather) {
         this.dailyWeather = dailyWeather;
     }
 
@@ -146,36 +149,43 @@ public class WeatherLocation {
     }
 
     public void updateData() {
-        if (!this.canUpdateDaily() && !this.canUpdateCurrent())
-            return;
+        // first check if there's data on DB
+        if (this.currentWeather.isEmpty() || this.dailyWeather.isEmpty()) {
+            this.setDataFromDB();
+        }
 
-        var data = MeteoAPI.requestLocationData(this);
+        // then check if data is outdated/can be updated, if it is, then try to update
+        if (this.canUpdateCurrent() || this.canUpdateDaily()) {
+            var data = MeteoAPI.requestLocationData(this);
 
-        data.ifPresent((object) -> {
-            if (object.isJsonNull() || object.size() == 0) {
-                System.out.println("ué: " + this.getName());
-                return;
-            }
+            data.ifPresent((object) -> {
+                if (object.isJsonNull() || object.size() == 0) {
+                    System.out.println("ué: " + this.getName());
+                    return;
+                }
 
-            if (this.timezone.isEmpty() && object.has("timezone")) {
-                this.timezone = Optional.of(object.get("timezone").getAsString());
+                System.out.println("NOT FROM DB: " + this.name);
 
-                var tz = TimeZone.getTimeZone(this.timezone.get());
-                this.daylight = tz.inDaylightTime(new Date());
-                this.longTZ = Optional.of(tz.getDisplayName(this.daylight, TimeZone.LONG));
-                this.shortTZ = Optional.of(tz.getDisplayName(this.daylight, TimeZone.SHORT));
-            }
+                if (this.timezone.isEmpty() && object.has("timezone")) {
+                    this.timezone = Optional.of(object.get("timezone").getAsString());
 
-            if (object.has("current_weather")) {
-                this.currentWeather = CurrentWeather.fromJSON(object);
-            }
+                    var tz = TimeZone.getTimeZone(this.timezone.get());
+                    this.daylight = tz.inDaylightTime(new Date());
+                    this.longTZ = Optional.of(tz.getDisplayName(this.daylight, TimeZone.LONG));
+                    this.shortTZ = Optional.of(tz.getDisplayName(this.daylight, TimeZone.SHORT));
+                }
 
-            if (object.has("daily") && object.has("hourly")) {
-                this.dailyWeather = DailyWeather.fromJSON(object);
-            }
+                if (object.has("current_weather")) {
+                    this.currentWeather = CurrentWeather.fromJSON(object.getAsJsonObject("current_weather"));
+                }
 
-            this.lastUpdated = System.currentTimeMillis();
-        });
+                if (object.has("daily") && object.has("hourly")) {
+                    this.dailyWeather = this.createDailyFromJSON(object);
+                }
+
+                this.lastUpdated = System.currentTimeMillis();
+            });
+        }
     }
 
     public JsonObject toJsonObject(boolean include) {
@@ -184,8 +194,14 @@ public class WeatherLocation {
         obj.addProperty("name", this.name);
         obj.addProperty("latitude", this.latitude);
         obj.addProperty("longitude", this.longitude);
-        obj.addProperty("country", this.country);
-        obj.addProperty("country_code", this.countryCode);
+
+        if (this.country != null) {
+            obj.addProperty("country", this.country);
+        }
+
+        if (this.countryCode != null) {
+            obj.addProperty("country_code", this.countryCode);
+        }
 
         this.timezone.ifPresent(t -> {
             obj.addProperty("timezone", t);
@@ -200,22 +216,104 @@ public class WeatherLocation {
             var weather = new JsonObject();
             this.currentWeather.ifPresent((c) -> weather.add("current_weather", c.toJsonObject()));
 
-            var daily = new JsonArray();
             this.dailyWeather.ifPresent((d) -> {
+                var daily = new JsonArray();
                 for (var dailyWeather : d) {
                     daily.add(dailyWeather.toJsonObject());
                 }
                 weather.add("daily", daily);
             });
-            if (weather.size() > 0)
+
+            if (weather.size() > 0) {
                 obj.add("weather_data", weather);
+            }
         }
 
         return obj;
     }
 
+    private void setDataFromDB() {
+        WeatherManager.getWeatherStorage().queryWeatherData(this).ifPresent(json -> {
+            var weather_data = json.getAsJsonObject("weather_data");
+            System.out.println("DATA FROM DB: " + this.name);
+
+            if (weather_data.has("current_weather")) {
+                this.currentWeather = CurrentWeather.fromJSON(weather_data.getAsJsonObject("current_weather"));
+            }
+
+            if (weather_data.has("daily")) {
+                this.dailyWeather = this.createDailyFromJSON(json);
+            }
+        });
+
+    }
+
+    private Optional<List<DailyWeather>> createDailyFromJSON(JsonObject object) {
+
+        // if it's from DB
+        if (object.has("weather_data")) {
+            var array = new ArrayList<DailyWeather>();
+            var dailyArray = object.getAsJsonObject("weather_data").getAsJsonArray("daily");
+
+            dailyArray.forEach(obj -> {
+                var dailyObject = obj.getAsJsonObject();
+                DailyWeather daily = DailyWeather.fromJSON(dailyObject).get();
+
+                var hourlyArray = new ArrayList<HourlyWeather>();
+                dailyObject.getAsJsonArray("hourly").forEach(h -> {
+                    HourlyWeather.fromJSON(h.getAsJsonObject()).ifPresent(hr -> hourlyArray.add(hr));
+                });
+
+                daily.setHourlyWeather(Optional.of(hourlyArray));
+                array.add(daily);
+            });
+
+            return Optional.of(array);
+        }
+
+        // now from meteo api
+        var dailyArray = DailyWeather.fromJSONArray(object.getAsJsonObject("daily")).get();
+        var hourlyArray = HourlyWeather.fromJSONArray(object.getAsJsonObject("hourly")).get();
+
+        return setHourlyToCorrectDay(dailyArray, hourlyArray);
+    }
+
+    // sometimes, maybe, meteo doesn't give hourly for a full day, it gives 23 hours
+    // sometimes, that's why
+    // or maybe i'm dumb, but whatever
+    private Optional<List<DailyWeather>> setHourlyToCorrectDay(List<DailyWeather> dailyArray,
+            List<HourlyWeather> hourlyArray) {
+        var map = new HashMap<String, List<HourlyWeather>>(7);
+
+        hourlyArray.forEach(hour -> {
+            var date = hour.getLocalDateTime(this.timezone.get()).toLocalDate().toString();
+            var array = map.get(date);
+
+            if (array == null) {
+                array = new ArrayList<HourlyWeather>();
+            }
+
+            array.add(hour);
+            map.put(date, array);
+        });
+
+        dailyArray.forEach(day -> {
+            var date = day.getLocalDate(this.timezone.get()).toString();
+
+            map.forEach((k, v) -> {
+                if (k.equalsIgnoreCase(date)) {
+                    day.setHourlyWeather(Optional.of(v));
+                }
+            });
+        });
+
+        return Optional.of(dailyArray);
+    }
+
+    // tried doing this with ternary, but it wasn't working, so lottas of IF it is!!
     public static WeatherLocation fromJSON(JsonObject object) {
         var builder = getBuilder();
+
         if (object.has("geonames")) {
             var geoLoc = object.getAsJsonArray("geonames").get(0).getAsJsonObject();
 
@@ -223,28 +321,41 @@ public class WeatherLocation {
                     .name(geoLoc.get("name").getAsString())
                     .latitude(geoLoc.get("lat").getAsDouble())
                     .longitude(geoLoc.get("lng").getAsDouble())
-                    .country(geoLoc.has("countryName") ? geoLoc.get("countryName").getAsString() : "none")
-                    .countryCode(geoLoc.has("countryCode") ? geoLoc.get("countryCode").getAsString() : "none")
-                    .admin1(geoLoc.has("adminName1") ? geoLoc.get("adminName1").getAsString() : "none")
-                    .population(geoLoc.get("population").getAsInt());
+                    .country(geoLoc.get("countryName").getAsString())
+                    .countryCode(geoLoc.get("countryCode").getAsString());
 
-        } else {
-            builder.id(object.get("id").getAsInt())
-                    .name(object.get("name").getAsString())
-                    .latitude(object.get("latitude").getAsDouble())
-                    .longitude(object.get("longitude").getAsDouble())
-                    .country(object.has("country") ? object.get("country").getAsString() : "none")
-                    .countryCode(object.has("country_code") ? object.get("country_code").getAsString() : "none")
-                    .timezone(object.get("timezone").getAsString())
-                    .lastUpdated(object.has("last_updated") ? object.get("last_updated").getAsLong()
-                            : System.currentTimeMillis())
-                    .admin1(object.has("admin1") ? object.get("admin1").getAsString() : null)
-                    .currentWeather(CurrentWeather.fromJSON(object).orElse(null))
-                    .dailyWeather(DailyWeather.fromJSON(object).orElse(null));
-
-            if (object.has("population")) {
-                builder.population(object.get("population").getAsInt());
+            if (geoLoc.has("adminName1")) {
+                builder.admin1(geoLoc.get("adminName1").getAsString());
             }
+            if (geoLoc.has("population")) {
+                builder.population(geoLoc.get("population").getAsInt());
+            }
+
+            return builder.build();
+        }
+
+        builder.id(object.get("id").getAsInt())
+                .name(object.get("name").getAsString())
+                .latitude(object.get("latitude").getAsDouble())
+                .longitude(object.get("longitude").getAsDouble());
+
+        if (object.has("country")) {
+            builder.country(object.get("country").getAsString());
+        }
+        if (object.has("country_code")) {
+            builder.countryCode(object.get("country_code").getAsString());
+        }
+        if (object.has("timezone")) {
+            builder.timezone(object.get("timezone").getAsString());
+        }
+        if (object.has("admin1")) {
+            builder.admin1(object.get("admin1").getAsString());
+        }
+        if (object.has("population")) {
+            builder.population(object.get("population").getAsInt());
+        }
+        if (object.has("last_updated")) {
+            builder.lastUpdated(object.get("last_updated").getAsInt());
         }
 
         return builder.build();
