@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -15,6 +16,7 @@ import com.google.gson.JsonArray;
 
 import br.com.weather.weatherrest.data.weather.WeatherManager;
 
+@CrossOrigin
 @RestController
 @SpringBootApplication
 public class WeatherRestApplication {
@@ -32,6 +34,7 @@ public class WeatherRestApplication {
     public ResponseEntity<String> search(@RequestParam(name = "name", required = false) String name,
             @RequestParam(name = "lat", required = false) String latitude,
             @RequestParam(name = "long", required = false) String longitude) {
+        System.out.println("niiii");
 
         if (name != null) {
             var locations = WeatherManager.getByName(name);

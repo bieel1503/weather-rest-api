@@ -39,16 +39,16 @@ public final class WeatherManager {
                 .collect(Collectors.toList());
 
         if (list.isEmpty() || !patterns.contains(normalized.toLowerCase())) {
-            var search = MeteoAPI.requestLocationByName(normalized);
-            search.ifPresent((l) -> {
-                l.forEach((w) -> {
-                    if (!locations.containsKey(w.getId())) {
-                        System.out.println("new search by name = " + w.getName());
-                        list.add(w);
-                        locations.put(w.getId(), w);
-                    }
-                });
-            });
+            MeteoAPI.requestLocationByName(normalized)
+                    .ifPresent((l) -> {
+                        l.forEach((w) -> {
+                            if (!locations.containsKey(w.getId())) {
+                                System.out.println("new search by name = " + w.getName());
+                                list.add(w);
+                                locations.put(w.getId(), w);
+                            }
+                        });
+                    });
 
             patterns.add(normalized);
         }
@@ -124,15 +124,14 @@ public final class WeatherManager {
 
     private static void loadLocations() {
         var before = System.currentTimeMillis();
-        var locs = storage.queryLocations();
-        locs.ifPresent(l -> {
-            l.forEach(loc -> {
-                locations.put(loc.getId(), loc);
-            });
+        storage.queryLocations()
+                .ifPresent(l -> {
+                    l.forEach(loc -> {
+                        locations.put(loc.getId(), loc);
+                    });
 
-            var after = System.currentTimeMillis() - before;
-            WeatherRestApplication.logger.info("loaded " + l.size() + " locations in " + after + " ms.");
-
-        });
+                    var after = System.currentTimeMillis() - before;
+                    WeatherRestApplication.logger.info("loaded " + l.size() + " locations in " + after + " ms.");
+                });
     }
 }

@@ -156,35 +156,34 @@ public class WeatherLocation {
 
         // then check if data is outdated/can be updated, if it is, then try to update
         if (this.canUpdateCurrent() || this.canUpdateDaily()) {
-            var data = MeteoAPI.requestLocationData(this);
+            MeteoAPI.requestLocationData(this)
+                    .ifPresent((object) -> {
+                        if (object.isJsonNull() || object.size() == 0) {
+                            System.out.println("ué: " + this.getName());
+                            return;
+                        }
 
-            data.ifPresent((object) -> {
-                if (object.isJsonNull() || object.size() == 0) {
-                    System.out.println("ué: " + this.getName());
-                    return;
-                }
+                        System.out.println("NOT FROM DB: " + this.name);
 
-                System.out.println("NOT FROM DB: " + this.name);
+                        if (this.timezone.isEmpty() && object.has("timezone")) {
+                            this.timezone = Optional.of(object.get("timezone").getAsString());
 
-                if (this.timezone.isEmpty() && object.has("timezone")) {
-                    this.timezone = Optional.of(object.get("timezone").getAsString());
+                            var tz = TimeZone.getTimeZone(this.timezone.get());
+                            this.daylight = tz.inDaylightTime(new Date());
+                            this.longTZ = Optional.of(tz.getDisplayName(this.daylight, TimeZone.LONG));
+                            this.shortTZ = Optional.of(tz.getDisplayName(this.daylight, TimeZone.SHORT));
+                        }
 
-                    var tz = TimeZone.getTimeZone(this.timezone.get());
-                    this.daylight = tz.inDaylightTime(new Date());
-                    this.longTZ = Optional.of(tz.getDisplayName(this.daylight, TimeZone.LONG));
-                    this.shortTZ = Optional.of(tz.getDisplayName(this.daylight, TimeZone.SHORT));
-                }
+                        if (object.has("current_weather")) {
+                            this.currentWeather = CurrentWeather.fromJSON(object.getAsJsonObject("current_weather"));
+                        }
 
-                if (object.has("current_weather")) {
-                    this.currentWeather = CurrentWeather.fromJSON(object.getAsJsonObject("current_weather"));
-                }
+                        if (object.has("daily") && object.has("hourly")) {
+                            this.dailyWeather = this.createDailyFromJSON(object);
+                        }
 
-                if (object.has("daily") && object.has("hourly")) {
-                    this.dailyWeather = this.createDailyFromJSON(object);
-                }
-
-                this.lastUpdated = System.currentTimeMillis();
-            });
+                        this.lastUpdated = System.currentTimeMillis();
+                    });
         }
     }
 
@@ -233,18 +232,20 @@ public class WeatherLocation {
     }
 
     private void setDataFromDB() {
-        WeatherManager.getWeatherStorage().queryWeatherData(this).ifPresent(json -> {
-            var weather_data = json.getAsJsonObject("weather_data");
-            System.out.println("DATA FROM DB: " + this.name);
+        WeatherManager.getWeatherStorage()
+                .queryWeatherData(this)
+                .ifPresent(json -> {
+                    var weather_data = json.getAsJsonObject("weather_data");
+                    System.out.println("DATA FROM DB: " + this.name);
 
-            if (weather_data.has("current_weather")) {
-                this.currentWeather = CurrentWeather.fromJSON(weather_data.getAsJsonObject("current_weather"));
-            }
+                    if (weather_data.has("current_weather")) {
+                        this.currentWeather = CurrentWeather.fromJSON(weather_data.getAsJsonObject("current_weather"));
+                    }
 
-            if (weather_data.has("daily")) {
-                this.dailyWeather = this.createDailyFromJSON(json);
-            }
-        });
+                    if (weather_data.has("daily")) {
+                        this.dailyWeather = this.createDailyFromJSON(json);
+                    }
+                });
 
     }
 

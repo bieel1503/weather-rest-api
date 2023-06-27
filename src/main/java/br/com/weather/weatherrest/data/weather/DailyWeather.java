@@ -128,13 +128,13 @@ public class DailyWeather {
         obj.addProperty("showers_sum", this.showersSum);
         obj.addProperty("snowfall_sum", this.snowfallSum);
         obj.addProperty("precipitation_hours", this.precipitationHours);
-        obj.addProperty("weathercode", this.weatherCode.getCode());
         obj.addProperty("sunrise", this.sunrise);
         obj.addProperty("sunset", this.sunset);
         obj.addProperty("windspeed_10m_max", this.windSpeed);
         obj.addProperty("windgusts_10m_max", this.windGust);
         obj.addProperty("winddirection_10m_dominant", this.windDirection);
         obj.addProperty("time", this.timestamp);
+        obj.add("weathercode", this.weatherCode.toJsonObject());
 
         this.hourlyWeather.ifPresent(list -> {
             var hourly = new JsonArray();
@@ -209,7 +209,7 @@ public class DailyWeather {
                 .showersSum(object.get("showers_sum").getAsDouble())
                 .snowfallSum(object.get("snowfall_sum").getAsDouble())
                 .precipitationHours(object.get("precipitation_hours").getAsDouble())
-                .weatherCode(WeatherCode.valueOf(object.get("weathercode").getAsInt()))
+                .weatherCode(WeatherCode.valueOf(object.getAsJsonObject("weathercode").get("code").getAsInt()))
                 .sunrise(object.get("sunrise").getAsLong())
                 .sunset(object.get("sunset").getAsLong())
                 .windSpeed(object.get("windspeed_10m_max").getAsDouble())

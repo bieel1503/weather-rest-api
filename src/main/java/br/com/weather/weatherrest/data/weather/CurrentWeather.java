@@ -43,8 +43,8 @@ public class CurrentWeather {
         obj.addProperty("temperature", this.temperature);
         obj.addProperty("windspeed", this.windSpeed);
         obj.addProperty("winddirection", this.windDirection);
-        obj.addProperty("weathercode", this.code.getCode());
         obj.addProperty("time", this.timestamp);
+        obj.add("weathercode", this.code.toJsonObject());
         return obj;
     }
 
@@ -54,7 +54,10 @@ public class CurrentWeather {
 
         var time = object.get("time").getAsLong();
         var temp = object.get("temperature").getAsDouble();
-        var code = object.get("weathercode").getAsInt();
+
+        var wcode = object.get("weathercode");
+        var code = wcode.isJsonObject() ? wcode.getAsJsonObject().get("code").getAsInt() : wcode.getAsInt();
+
         var speed = object.get("windspeed").getAsDouble();
         var direction = object.get("winddirection").getAsDouble();
 

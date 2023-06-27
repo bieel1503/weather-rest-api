@@ -148,10 +148,10 @@ public class HourlyWeather {
         object.addProperty("rain", this.rain);
         object.addProperty("showers", this.showers);
         object.addProperty("snow_depth", this.snowDepth);
-        object.addProperty("weathercode", this.weatherCode.getCode());
         object.addProperty("freezinglevel_height", this.freezingLevelHeight);
         object.addProperty("is_day", this.isDay);
         object.addProperty("time", this.timestamp);
+        object.add("weathercode", this.weatherCode.toJsonObject());
 
         return object;
     }
@@ -228,7 +228,7 @@ public class HourlyWeather {
                 .rain(object.get("rain").getAsDouble())
                 .showers(object.get("showers").getAsDouble())
                 .snowDepth(object.get("snow_depth").getAsDouble())
-                .weatherCode(WeatherCode.valueOf(object.get("weathercode").getAsInt()))
+                .weatherCode(WeatherCode.valueOf(object.getAsJsonObject("weathercode").get("code").getAsInt()))
                 .freezingLevelHeight(object.get("freezinglevel_height").getAsDouble())
                 .windGusts(object.get("windgusts_10m").getAsDouble())
                 .isDay(object.get("is_day").getAsBoolean())
