@@ -107,7 +107,6 @@ public class WeatherStorage {
 
                 var json = location.toJsonObject(true);
 
-                System.out.println("store: " + location.getName());
                 statement.setInt(1, location.getId());
                 statement.setString(2, location.getName());
                 statement.setString(3, location.getNormalizedName());

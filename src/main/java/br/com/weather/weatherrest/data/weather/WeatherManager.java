@@ -43,7 +43,6 @@ public final class WeatherManager {
                     .ifPresent((l) -> {
                         l.forEach((w) -> {
                             if (!locations.containsKey(w.getId())) {
-                                System.out.println("new search by name = " + w.getName());
                                 list.add(w);
                                 locations.put(w.getId(), w);
                             }

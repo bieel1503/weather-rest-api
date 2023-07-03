@@ -165,11 +165,8 @@ public class WeatherLocation {
             MeteoAPI.requestLocationData(this)
                     .ifPresent((object) -> {
                         if (object.isJsonNull() || object.size() == 0) {
-                            System.out.println("ué: " + this.getName());
                             return;
                         }
-
-                        System.out.println("NOT FROM DB: " + this.name);
 
                         if (this.timezone.isEmpty() && object.has("timezone")) {
                             this.timezone = Optional.of(object.get("timezone").getAsString());
@@ -243,7 +240,6 @@ public class WeatherLocation {
                 .queryWeatherData(this)
                 .ifPresent(json -> {
                     var weather_data = json.getAsJsonObject("weather_data");
-                    System.out.println("DATA FROM DB: " + this.name);
 
                     if (weather_data.has("current_weather")) {
                         this.currentWeather = CurrentWeather.fromJSON(weather_data.getAsJsonObject("current_weather"));
