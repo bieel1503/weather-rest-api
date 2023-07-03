@@ -34,6 +34,11 @@ public class WeatherRestApplication {
     public ResponseEntity<String> search(@RequestParam(name = "name", required = false) String name,
             @RequestParam(name = "lat", required = false) String latitude,
             @RequestParam(name = "long", required = false) String longitude) {
+        try {
+            Thread.sleep(2000);
+        } catch (Exception e) {
+        }
+
         System.out.println("niiii");
 
         if (name != null) {
@@ -54,13 +59,15 @@ public class WeatherRestApplication {
             }
         }
 
-        return new ResponseEntity<String>("{}", HttpStatus.NOT_FOUND);
+        return new ResponseEntity<String>("[]", HttpStatus.NOT_FOUND);
     }
 
     @GetMapping(path = "/location", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> get(@RequestParam(name = "id") String id) {
         if (id == null)
             return new ResponseEntity<String>("{}", HttpStatus.BAD_REQUEST);
+
+        System.out.println("niiii");
 
         try {
             var pId = Integer.valueOf(id);

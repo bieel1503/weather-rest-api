@@ -19,6 +19,7 @@ public class WeatherLocation {
     private final double latitude, longitude;
     private Optional<String> timezone, shortTZ, longTZ;
     private boolean daylight;
+    private Optional<Integer> timezoneOffset;
     private Optional<String> admin1;
     private Optional<Integer> population;
     private Optional<CurrentWeather> currentWeather;
@@ -46,6 +47,7 @@ public class WeatherLocation {
             this.daylight = tz.inDaylightTime(new Date());
             this.longTZ = Optional.of(tz.getDisplayName(this.daylight, TimeZone.LONG));
             this.shortTZ = Optional.of(tz.getDisplayName(this.daylight, TimeZone.SHORT));
+            this.timezoneOffset = Optional.of(tz.getOffset(System.currentTimeMillis()));
         });
     }
 
@@ -79,6 +81,10 @@ public class WeatherLocation {
 
     public Optional<String> getShortTimezone() {
         return this.shortTZ;
+    }
+
+    public Optional<Integer> getTimezoneOffset() {
+        return this.timezoneOffset;
     }
 
     public boolean getDaylight() {
@@ -206,6 +212,7 @@ public class WeatherLocation {
             obj.addProperty("timezone", t);
             obj.addProperty("timezone_short", this.shortTZ.get());
             obj.addProperty("timezone_long", this.longTZ.get());
+            obj.addProperty("timezone_offset", (this.timezoneOffset.get() / 1000));
         });
         obj.addProperty("last_updated", this.lastUpdated);
         this.admin1.ifPresent((a) -> obj.addProperty("admin1", a));
