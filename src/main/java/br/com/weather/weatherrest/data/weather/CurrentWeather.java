@@ -1,6 +1,8 @@
 package br.com.weather.weatherrest.data.weather;
 
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+
 import com.google.gson.JsonObject;
 
 public class CurrentWeather {
@@ -36,6 +38,10 @@ public class CurrentWeather {
 
     public long getTimestamp() {
         return this.timestamp;
+    }
+
+    public boolean canUpdate() {
+        return (System.currentTimeMillis() - this.timestamp) > TimeUnit.HOURS.toMillis(1);
     }
 
     public JsonObject toJsonObject() {

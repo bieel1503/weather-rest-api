@@ -136,13 +136,16 @@ public class WeatherLocation {
     }
 
     public boolean canUpdateDaily() {
-        return !this.dailyWeather.isPresent()
-                || System.currentTimeMillis() > (this.lastUpdated + TimeUnit.DAYS.toMillis(1));
+        if (!this.dailyWeather.isPresent()) {
+            return true;
+        }
+        var firstDay = this.dailyWeather.get().get(0);
+
+        return (System.currentTimeMillis() - firstDay.getTimestamp()) > TimeUnit.DAYS.toMillis(1);
     }
 
     public boolean canUpdateCurrent() {
-        return !this.currentWeather.isPresent()
-                || System.currentTimeMillis() > (this.lastUpdated + TimeUnit.HOURS.toMillis(1));
+        return !this.currentWeather.isPresent() || this.currentWeather.get().canUpdate();
     }
 
     public boolean canClear() {
